@@ -5,7 +5,7 @@ Written by Paul Stone and Alex Chapman, [Context Information Security](http://ww
 ## Summary
 
 This is a proof of concept script to inject 'fake' updates into non-SSL WSUS traffic.
-It is based on our BlackHat USA 2015 presentation, 'WSUSpect – Compromising the Windows Enterprise via Windows Update'
+It is based on our Black Hat USA 2015 presentation, 'WSUSpect – Compromising the Windows Enterprise via Windows Update'
 
 - White paper: http://www.contextis.com/documents/161/CTX_WSUSpect_White_Paper.pdf
 - Slides: TODO
