@@ -35,26 +35,67 @@ from twisted.python.log import startLogging
 from twisted.web import server, resource, proxy, http
 from twisted.python.filepath import FilePath
 
+# add timeout features to the ProxyClient requests
+from twisted.protocols.policies import TimeoutMixin
+
 
 #ProxyClient(twisted.web.http.HTTPClient)
-class InterceptingProxyClient(proxy.ProxyClient):
+class InterceptingProxyClient(proxy.ProxyClient, TimeoutMixin):
+    def __init__(self, command, rest, version, headers, data, father):
+        proxy.ProxyClient.__init__(self, command, rest, version, headers, data, father)
+        
+        # Define variables to track a terminated request and set a timeout
+        # set a callback handler for when a "finish" is reached
+        self.finished = False
+        self.setTimeout(20)
+        d = father.notifyFinish()
+        d.addBoth(self.onRequestFinished)
+        
+    def onRequestFinished(self, message=None):
+        self.finish()
+        
+    def finish(self):
+        # terminate the connection the proper way
+        # if the parent had not been terminated, terminate it
+        if not self.father.finished and not self.father._disconnected:
+            self.father.finish()
+            
+        #if you have not been terminated, terminate it
+        if not self.finished:
+            self.transport.loseConnection()
+            self.setTimeout(None)
+            self.finished = True
+                
+    def connectionMade(self):
+        # Edge case where the connection terminated prior to the event notification being setup 
+        if self.father._disconnected:
+            self.finish()
+            return
+
+        # Send request to web server
+        proxy.ProxyClient.connectionMade(self)
+        
+    def timeoutConnection(self):
+        # Recognize a timeout 
+        TimeoutMixin.timeoutConnection(self)
+
     def handleResponsePart(self, buffer):
-        #Buffer the output if we intend to modify it
+        # Buffer the output if we intend to modify it
         if self.father.has_response_modifiers():
             self.father.response_buffer.write(buffer)
         else:
             proxy.ProxyClient.handleResponsePart(self, buffer)
  
     def handleResponseEnd(self):
-        #Process the buffered output if we are modifying it
+        # Process the buffered output if we are modifying it
         if self.father.has_response_modifiers():
             if not self._finished:
-                #Replace the StringIO with a string for the modifiers
+                # Replace the StringIO with a string for the modifiers
                 data = self.father.response_buffer.getvalue()
                 self.father.response_buffer.close()
                 self.father.response_buffer = data
 
-                #Do editing of response headers / content here
+                # Do editing of response headers / content here
                 self.father.run_response_modifiers()
                 self.father.responseHeaders.setRawHeaders('content-length', [len(self.father.response_buffer)])
                 self.father.write(self.father.response_buffer)
