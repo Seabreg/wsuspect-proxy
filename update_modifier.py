@@ -146,8 +146,8 @@ class WsusXmlModifier(object):
         
     def __modify_extended_update_response(self, content, request):
         print('Adding fake update metadata to GetExtendedUpdateInfoResult')
-        update_xml = self.__gen_extended_update_response_xml()
-        file_xml = self.__gen_file_location_xml(request.getAllHeaders()['host'])
+        update_xml = self.__gen_extended_update_response_xml().encode('utf-8')
+        file_xml = self.__gen_file_location_xml(request.getAllHeaders()['host']).encode('utf-8')
         
         if '<Updates>' in content:
             # There are real updates in the WSUS response, so add ours to the end
