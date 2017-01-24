@@ -172,6 +172,10 @@ class InterceptingProxyRequest(proxy.ProxyRequest):
     def process(self):
         host = None
         port = None
+
+        if not self.uri.startswith("http://") and not self.uri.startswith("https://"):
+            self.uri = "http://" + self.getHeader("Host") + self.uri
+
         parsed_uri = urlparse(self.uri)
         self.uri = urlunparse(('', '', parsed_uri.path, parsed_uri.params, parsed_uri.query, parsed_uri.fragment)) or "/"
 
